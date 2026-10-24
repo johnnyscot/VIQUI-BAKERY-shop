@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Viqui Bakery | Carlottas, tiramisú y cheesecakes artesanales</title>
+<meta name="description" content="Carlottas, tiramisú y cheesecakes hechos a mano. Arma tu pedido y confírmalo por WhatsApp.">
+<meta name="theme-color" content="#1E0F09">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;1,9..144,500&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/components.css">
+<link rel="stylesheet" href="css/sections.css">
+</head>
+<body>
+<div class="bg" aria-hidden="true"><i class="blob b1"></i><i class="blob b2"></i><i class="blob b3"></i></div>
+
+<header class="site-header glass" id="top">
+  <a class="brand" href="#top">Viqui Bakery</a>
+  <button class="cart-btn" data-open="cartDrawer" aria-label="Abrir carrito">🛒<span class="cart-count" id="cartCount">0</span></button>
+</header>
+
+<main>
+  <section class="hero">
+    <div class="hero-copy">
+      <h1>La magia de<br>Viqui Bakery</h1>
+      <p>Carlottas, tiramisú y cheesecakes hechos a mano cada día. Escoge tus favoritos y confirma el pedido por WhatsApp.</p>
+      <div class="hero-actions">
+        <a class="btn btn-primary" href="#menu">Ver el menú</a>
+        <a class="btn btn-glass" href="#como-pedir">Cómo pedir</a>
+      </div>
+    </div>
+    <article class="hero-feature glass" id="heroFeature"></article>
+  </section>
+
+  <section class="wrap" id="menu">
+    <div class="toolbar glass">
+      <label class="search"><span aria-hidden="true">🔍</span>
+        <input type="search" id="search" placeholder="Buscar un postre" aria-label="Buscar un postre" autocomplete="off">
+      </label>
+      <div class="chips" id="chips" role="group" aria-label="Categorías">
+        <button class="chip" data-cat="all" aria-pressed="true">Todos</button>
+        <button class="chip" data-cat="carlotta" aria-pressed="false">Carlottas</button>
+        <button class="chip" data-cat="tiramisu" aria-pressed="false">Tiramisú</button>
+        <button class="chip" data-cat="cheesecake" aria-pressed="false">Cheesecakes</button>
+      </div>
+    </div>
+    <div id="productsContainer"><p class="loading">Cargando menú…</p></div>
+  </section>
+
+  <section class="wrap" id="como-pedir">
+    <h2 class="sec-title">Cómo pedir</h2>
+    <div class="steps">
+      <div class="step glass"><span class="n">1</span><h3>Escoge tus postres</h3><p>Toca un postre para ver el detalle o usa el + para agregarlo directo.</p></div>
+      <div class="step glass"><span class="n">2</span><h3>Completa tus datos</h3><p>Tu nombre, si recoges o prefieres delivery, y la fecha en que lo necesitas.</p></div>
+      <div class="step glass"><span class="n">3</span><h3>Confirma por WhatsApp</h3><p>Te llega el pedido armado a nuestro chat y lo confirmamos contigo.</p></div>
+    </div>
+  </section>
+
+  <section class="wrap" id="contacto">
+    <h2 class="sec-title">Contacto y horarios</h2>
+    <div class="contact" id="contactInfo"></div>
+  </section>
+</main>
+
+<footer class="footer">© <span id="year"></span> Viqui Bakery. Hecho con amor.</footer>
+
+<nav class="tabbar glass" aria-label="Navegación móvil">
+  <a class="tab" href="#top"><span>🏠</span>Inicio</a>
+  <a class="tab" href="#menu"><span>🍰</span>Menú</a>
+  <button class="tab" data-open="cartDrawer"><span>🛒</span>Carrito<i class="tab-badge" id="tabBadge" hidden>0</i></button>
+  <a class="tab" href="#contacto"><span>💬</span>Contacto</a>
+</nav>
+
+<button class="cartbar" id="cartBar" data-open="cartDrawer" hidden><span id="cbCount">0 postres</span><span>Ver pedido</span><strong id="cbTotal">RD$0</strong></button>
+<div class="toast glass" id="toast" role="status" aria-live="polite"></div>
+<div class="overlay" id="overlay"></div>
+
+<!-- Detalle de producto -->
+<div class="sheet modal" id="productModal" role="dialog" aria-modal="true" aria-label="Detalle del producto">
+  <div class="sheet-head"><h2>Detalle</h2><button class="x" data-close aria-label="Cerrar">✕</button></div>
+  <div class="sheet-body" id="productBody"></div>
+</div>
+
+<!-- Carrito -->
+<aside class="sheet drawer" id="cartDrawer" role="dialog" aria-modal="true" aria-label="Tu pedido">
+  <div class="sheet-head"><h2>Tu pedido</h2><button class="x" data-close aria-label="Cerrar">✕</button></div>
+  <div class="sheet-body">
+    <div id="cartItems"></div>
+    <form id="orderForm" class="order-form" onsubmit="return false" novalidate>
+      <label class="field">Tu nombre<input name="customer" autocomplete="name" placeholder="Nombre y apellido" required></label>
+      <div class="seg" role="radiogroup" aria-label="Entrega">
+        <label><input type="radio" name="mode" value="pickup" checked><span>Recoger</span></label>
+        <label><input type="radio" name="mode" value="delivery"><span>Delivery</span></label>
+      </div>
+      <label class="field" id="addressField" hidden>Dirección de entrega<input name="address" autocomplete="street-address" placeholder="Calle, sector y referencia"></label>
+      <label class="field">Fecha que lo necesitas<input type="date" name="date"></label>
+      <label class="field">Notas (opcional)<textarea name="note" rows="2" placeholder="Mensaje en la caja, alergias, hora preferida..."></textarea></label>
+    </form>
+  </div>
+  <div class="sheet-foot">
+    <div class="total-row"><span>Total</span><strong id="cartTotal">RD$0</strong></div>
+    <button class="btn btn-wa" id="checkoutBtn">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true"><path d="M17.47 14.38c-.3-.15-1.76-.87-2.03-.97-.27-.1-.47-.15-.67.15-.2.3-.77.97-.94 1.16-.17.2-.35.22-.64.08-.3-.15-1.26-.46-2.39-1.47-.88-.79-1.48-1.76-1.65-2.06-.17-.3-.02-.46.13-.6.13-.13.3-.35.45-.52.15-.17.2-.3.3-.5.1-.2.05-.37-.03-.52-.07-.15-.67-1.61-.92-2.2-.24-.58-.49-.5-.67-.51h-.57c-.2 0-.52.07-.8.37-.27.3-1.04 1.02-1.04 2.48s1.07 2.88 1.21 3.07c.15.2 2.1 3.2 5.08 4.49.71.3 1.26.49 1.7.63.71.23 1.36.2 1.87.12.57-.08 1.76-.72 2-1.41.25-.7.25-1.29.17-1.41-.07-.13-.27-.2-.57-.35M12.05 21.78a9.87 9.87 0 0 1-5.03-1.38l-.36-.21-3.74.98 1-3.65-.24-.37a9.86 9.86 0 0 1-1.51-5.26c0-5.45 4.44-9.89 9.89-9.89 2.64 0 5.12 1.03 6.99 2.9a9.83 9.83 0 0 1 2.89 6.99c0 5.45-4.44 9.89-9.89 9.89M20.46 3.49A11.8 11.8 0 0 0 12.05 0C5.5 0 .16 5.34.16 11.89c0 2.1.55 4.14 1.59 5.95L.06 24l6.3-1.65a11.9 11.9 0 0 0 5.69 1.45c6.55 0 11.89-5.34 11.89-11.89 0-3.18-1.24-6.17-3.48-8.42"/></svg>
+      Confirmar por WhatsApp
+    </button>
+    <button class="link-btn" id="clearCart">Vaciar carrito</button>
+  </div>
+</aside>
+
+<!-- Pedido enviado -->
+<div class="sheet modal confirm" id="confirmModal" role="dialog" aria-modal="true" aria-label="Pedido enviado">
+  <div class="sheet-body">
+    <div class="confirm-icon">🎉</div>
+    <h2>¡Pedido enviado!</h2>
+    <p>Abrimos WhatsApp con tu pedido listo. Si no lo enviaste todavía, solo toca enviar. Te responderemos pronto para confirmar.</p>
+    <button class="btn btn-primary" data-close>Seguir viendo el menú</button>
+  </div>
+</div>
+
+<script src="js/config.js"></script>
+<script src="js/products.js"></script>
+<script src="js/cart.js"></script>
+<script src="js/remote.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
