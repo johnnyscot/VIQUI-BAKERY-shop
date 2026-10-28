@@ -39,12 +39,16 @@ function renderMenu() {
       <div class="grid">${list.map(card).join("")}</div></section>`;
   }).join("");
   $("#productsContainer").innerHTML = html ||
-    `<div class="empty glass"><p>No encontramos “${esc(state.q)}” en el menú.</p><button class="btn btn-glass" data-clear>Ver todo el menú</button></div>`;
+    PRODUCTS.length ? `<div class="empty glass"><p>No encontramos “${esc(state.q)}” en el menú.</p><button class="btn btn-glass" data-clear>Ver todo el menú</button></div>`
+      : `<div class="empty glass"><p>Estamos preparando el menú. ¡Vuelve en un momento! 🍰</p></div>`;
 }
 
 function renderHero() {
-  const p = PRODUCTS.find(x => x.featured) || byId(FEATURED_ID) || PRODUCTS[0];
-  $("#heroFeature").innerHTML = `
+  const p = PRODUCTS.find(x => x.featured) || PRODUCTS[0];
+  const box = $("#heroFeature");
+  box.hidden = !p;
+  if (!p) return;
+  box.innerHTML = `
     <div class="thumb">${pic(p, "cover")}${p.badge ? `<span class="badge">${p.badge}</span>` : ""}</div>
     <div class="feat-body"><h2>${p.name}</h2><p>${p.desc}</p>
       <div class="feat-row"><span class="price">${money(p.price)}</span>
@@ -190,6 +194,18 @@ $$(".sheet").forEach(s => {
   s.addEventListener("touchend", e => { if (y0 !== null && e.changedTouches[0].clientY - y0 > 70) closeLayers(); y0 = null; });
 });
 
+/* ── Tiempo real: refresca todo sin recargar la página ── */
+async function refresh() {
+  if (!(await Remote.load())) return;
+  if (state.cat !== "all" && !CATEGORIES.some(c => c.id === state.cat)) state.cat = "all";
+  const antes = Cart.items.length;
+  Cart.items = Cart.items.filter(i => byId(i.id));
+  Cart.save();
+  if (Cart.items.length < antes) toast("Un postre de tu pedido ya no está disponible");
+  if (state.modalId && !byId(state.modalId)) { state.modalId = null; if ($("#productModal").classList.contains("open")) closeLayers(); }
+  renderChips(); renderHero(); renderMenu(); renderContact(); renderCart();
+}
+
 /* ── Inicio ── */
 async function init() {
   await Remote.load();
@@ -199,5 +215,6 @@ async function init() {
   $("#year").textContent = new Date().getFullYear();
   const d = new Date(); d.setDate(d.getDate() + CONFIG.minDaysAhead);
   $("#orderForm").elements.date.min = d.toISOString().slice(0, 10);
+  Remote.subscribe(refresh);
 }
 init();
