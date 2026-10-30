@@ -4,6 +4,7 @@ const money = n => `${CONFIG.currency}${Number(n).toLocaleString("es-DO")}`;
 const fold = s => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const byId = id => PRODUCTS.find(p => p.id === id);
+const localISO = d => new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
 const state = { cat: "all", q: "", modalId: null, modalQty: 1 };
 
 // Foto del producto; si no hay o no carga, se muestra el emoji
@@ -13,12 +14,14 @@ function pic(p, cls) {
 }
 
 /* ── Pintar la página ── */
+const sold = p => p.stock === 0;
+const stockTag = p => p.stock == null ? "" : p.stock === 0 ? `<span class="stock out">Agotado hoy</span>` : p.stock <= 5 ? `<span class="stock low">Quedan ${p.stock}</span>` : "";
 const card = p => `
-  <article class="card glass" tabindex="0" data-product="${p.id}" aria-label="${esc(p.name)}, ${money(p.price)}">
-    <div class="thumb">${pic(p, "cover")}${p.badge ? `<span class="badge">${esc(p.badge)}</span>` : ""}</div>
+  <article class="card glass${sold(p) ? " sold" : ""}" tabindex="0" data-product="${p.id}" aria-label="${esc(p.name)}, ${money(p.price)}${sold(p) ? ", agotado" : ""}">
+    <div class="thumb">${pic(p, "cover")}${p.badge ? `<span class="badge">${esc(p.badge)}</span>` : ""}${stockTag(p)}</div>
     <div class="card-body"><h3>${esc(p.name)}</h3><p>${esc(p.desc)}</p>
       <div class="card-foot"><span class="price">${money(p.price)}</span>
-        <button class="add" data-add="${p.id}" aria-label="Agregar ${esc(p.name)}">+</button></div></div>
+        <button class="add" data-add="${p.id}" aria-label="Agregar ${esc(p.name)}"${sold(p) ? " disabled" : ""}>+</button></div></div>
   </article>`;
 
 function renderChips() {
@@ -46,7 +49,7 @@ function renderHero() {
   box.innerHTML = `<div class="thumb">${pic(p, "cover")}${p.badge ? `<span class="badge">${esc(p.badge)}</span>` : ""}</div>
     <div class="feat-body"><h2>${esc(p.name)}</h2><p>${esc(p.desc)}</p>
       <div class="feat-row"><span class="price">${money(p.price)}</span>
-        <button class="btn btn-primary" data-add="${p.id}">Agregar al pedido</button></div></div>`;
+        <button class="btn btn-primary" data-add="${p.id}"${sold(p) ? " disabled" : ""}>${sold(p) ? "Agotado hoy" : "Agregar al pedido"}</button></div></div>`;
 }
 
 function renderContact() {
@@ -80,11 +83,14 @@ function renderCart() {
   $("#cbTotal").textContent = money(Cart.total);
 }
 
-const renderAll = () => { renderChips(); renderHero(); renderMenu(); renderContact(); renderCart(); };
+const renderAll = () => { renderChips(); renderHero(); renderMenu(); renderEvents(); renderContact(); renderCart(); };
 
 /* ── Acciones ── */
 function addToCart(id, qty = 1) {
   const p = byId(id); if (!p) return;
+  const have = Cart.items.find(i => i.id === id)?.qty || 0;
+  if (p.stock === 0) return toast("Este postre se agotó hoy");
+  if (p.stock != null && have + qty > p.stock) return toast(`Solo quedan ${p.stock} de ${p.name}`);
   Cart.add(id, qty); renderCart();
   if (navigator.vibrate) navigator.vibrate(12);
   toast(`${p.emoji || "🍰"} ${p.name} agregado`);
@@ -104,11 +110,16 @@ function openProduct(id) {
     <div><h3>${esc(p.name)}</h3><p>${esc(p.desc)}</p>
       <div class="pm-row"><span class="price">${money(p.price)}</span>
         <div class="qty"><button data-mq="-1" aria-label="Quitar uno">−</button><b id="mq">1</b><button data-mq="1" aria-label="Agregar uno">+</button></div></div>
-      <button class="btn btn-primary" id="mAdd">Agregar · ${money(p.price)}</button></div></div>`;
+      <button class="btn btn-primary" id="mAdd"${sold(p) ? " disabled" : ""}>${sold(p) ? "Agotado hoy" : "Agregar · " + money(p.price)}</button></div></div>`;
   openLayer("productModal");
 }
 
-function checkout() {
+function showConfirm(title, text, url) {
+  $("#cfTitle").textContent = title; $("#cfText").textContent = text; $("#waLink").href = url;
+  openLayer("confirmModal");
+}
+
+async function checkout() {
   if (!Cart.items.length) return toast("Tu carrito está vacío");
   if (!CONFIG.whatsapp) return toast("El WhatsApp del negocio aún no está configurado");
   const f = $("#orderForm").elements, name = f.customer.value.trim(), delivery = f.mode.value === "delivery";
@@ -121,8 +132,53 @@ function checkout() {
     when ? `Fecha: ${when}` : null, "", lines, "", `*Total: ${money(Cart.total)}*`,
     f.note.value.trim() ? `\nNotas: ${f.note.value.trim()}` : null, "\n¡Hola! Me gustaría confirmar este pedido."
   ].filter(x => x !== null).join("\n");
-  window.open(`https://wa.me/${CONFIG.whatsapp}?text=${encodeURIComponent(msg)}`, "_blank");
-  Cart.clear(); renderCart(); openLayer("confirmModal");
+  const url = `https://wa.me/${CONFIG.whatsapp}?text=${encodeURIComponent(msg)}`;
+
+  const btn = $("#checkoutBtn"); btn.disabled = true;
+  const w = window.open("", "_blank"); // se abre con el toque; se completa cuando se confirma el stock
+  const r = await Store.placeOrder(Cart.items.map(i => ({ id: i.id, qty: i.qty })));
+  btn.disabled = false;
+  if (!r.ok) {
+    if (w) w.close();
+    if (r.error === "sin_stock") { Store.sig = ""; await refresh(); toast("Algunos postres ya no alcanzan. Revisa tu pedido"); }
+    else toast("No pudimos registrar el pedido. Intenta de nuevo");
+    return;
+  }
+  if (w) w.location.href = url;
+  Cart.clear(); renderCart();
+  showConfirm("¡Pedido enviado!", "Abrimos WhatsApp con tu pedido listo. Si no lo enviaste todavía, solo toca enviar. Te responderemos pronto para confirmar.", url);
+}
+
+/* ── Cumpleaños y eventos ── */
+function renderEvents() {
+  $("#eventos").hidden = CONFIG.eventsEnabled === false;
+  $("#eventHint").textContent = `${CONFIG.eventsNote ? CONFIG.eventsNote + " " : ""}Los eventos se coordinan con ${CONFIG.eventsLeadDays || 0} días de anticipación. Después de enviar, adjunta tus fotos de referencia en el chat de WhatsApp.`;
+}
+function prepareEvent() {
+  const f = $("#eventForm").elements, d = new Date();
+  $("#eventPicks").innerHTML = PRODUCTS.filter(p => p.stock !== 0).map(p =>
+    `<label class="pick"><input type="checkbox" value="${esc(p.name)}"><span>${esc(p.emoji || "🍰")} ${esc(p.name)}</span></label>`).join("");
+  d.setDate(d.getDate() + (CONFIG.eventsLeadDays || 0)); f.date.min = localISO(d);
+}
+function sendEvent() {
+  if (!CONFIG.whatsapp) return toast("El WhatsApp del negocio aún no está configurado");
+  const f = $("#eventForm").elements, name = f.customer.value.trim(), people = parseInt(f.people.value, 10), delivery = f.mode.value === "delivery";
+  if (!name) { f.customer.focus(); return toast("Escribe tu nombre"); }
+  if (!people || people < 1) { f.people.focus(); return toast("¿Para cuántas personas es?"); }
+  if (!f.date.value) { f.date.focus(); return toast("Escoge la fecha del evento"); }
+  if (delivery && !f.address.value.trim()) { f.address.focus(); return toast("Escribe la dirección de entrega"); }
+  const picks = $$("#eventPicks input:checked").map(i => i.value);
+  const when = new Date(f.date.value + "T12:00").toLocaleDateString("es-DO", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+  const msg = ["*Cotización de evento · Viqui Bakery*", `Cliente: ${name}`, `Evento: ${f.type.value}`, `Personas: ${people}`, `Fecha: ${when}`,
+    picks.length ? `Me interesa: ${picks.join(", ")}` : null,
+    `Entrega: ${delivery ? "Delivery — " + f.address.value.trim() : "Recoger en tienda"}`,
+    f.budget.value ? `Presupuesto aprox.: ${money(+f.budget.value)}` : null,
+    f.idea.value.trim() ? `Idea: ${f.idea.value.trim()}` : null, "", "Te enviaré fotos de referencia por aquí. ¡Gracias!"
+  ].filter(x => x !== null).join("\n");
+  const url = `https://wa.me/${CONFIG.whatsapp}?text=${encodeURIComponent(msg)}`;
+  window.open(url, "_blank");
+  $("#eventForm").reset(); $("#evAddressField").hidden = true;
+  showConfirm("¡Solicitud enviada!", "Abrimos WhatsApp con los datos de tu evento. Adjunta tus fotos de referencia en el chat para que podamos cotizarte mejor.", url);
 }
 
 let toastTimer;
@@ -135,7 +191,7 @@ function toast(msg) {
 async function refresh() {
   if (!(await Store.load()) && Store.ok && $("#productsContainer .loading") === null) return;
   if (state.cat !== "all" && !CATEGORIES.some(c => c.id === state.cat)) state.cat = "all";
-  if (Cart.prune()) { Cart.save(); toast("Un postre de tu pedido ya no está disponible"); }
+  if (Cart.prune()) { Cart.save(); toast("Ajustamos tu pedido a lo que hay disponible hoy"); }
   if (state.modalId && !byId(state.modalId)) { state.modalId = null; if ($("#productModal").classList.contains("open")) closeLayers(); }
   renderAll();
 }
@@ -145,16 +201,21 @@ document.addEventListener("click", e => {
   const t = e.target, add = t.closest("[data-add]"), open = t.closest("[data-open]"), cat = t.closest("[data-cat]"),
     qty = t.closest("[data-qty]"), mq = t.closest("[data-mq]"), prod = t.closest("[data-product]");
   if (add) return addToCart(+add.dataset.add);
-  if (open) return openLayer(open.dataset.open);
+  if (open) { if (open.dataset.open === "eventModal") prepareEvent(); return openLayer(open.dataset.open); }
   if (t.closest("[data-close]") || t === $("#overlay")) return closeLayers();
   if (t.closest("[data-retry]")) { Store.sig = ""; return refresh(); }
   if (cat) { state.cat = cat.dataset.cat; $$(".chip").forEach(c => c.setAttribute("aria-pressed", c === cat)); return renderMenu(); }
   if (t.closest("[data-clear]")) { state.q = ""; state.cat = "all"; $("#search").value = ""; return (renderChips(), renderMenu()); }
-  if (qty) { Cart.change(+qty.dataset.qty, +qty.dataset.d); return renderCart(); }
-  if (mq) { state.modalQty = Math.max(1, state.modalQty + +mq.dataset.mq); $("#mq").textContent = state.modalQty; $("#mAdd").textContent = `Agregar · ${money(byId(state.modalId).price * state.modalQty)}`; return; }
+  if (qty) {
+    const id = +qty.dataset.qty, dl = +qty.dataset.d, p = byId(id), have = Cart.items.find(i => i.id === id)?.qty || 0;
+    if (dl > 0 && p && p.stock != null && have + dl > p.stock) return toast(`Solo quedan ${p.stock} de ${p.name}`);
+    Cart.change(id, dl); return renderCart();
+  }
+  if (mq) { const mp = byId(state.modalId); state.modalQty = Math.min(mp.stock ?? 99, Math.max(1, state.modalQty + +mq.dataset.mq)); $("#mq").textContent = state.modalQty; $("#mAdd").textContent = `Agregar · ${money(byId(state.modalId).price * state.modalQty)}`; return; }
   if (t.closest("#mAdd")) { addToCart(state.modalId, state.modalQty); return closeLayers(); }
   if (t.closest("#checkoutBtn")) return checkout();
   if (t.closest("#clearCart")) { Cart.clear(); return renderCart(); }
+  if (t.closest("#eventSend")) return sendEvent();
   if (prod) return openProduct(+prod.dataset.product);
 });
 document.addEventListener("keydown", e => {
@@ -163,6 +224,7 @@ document.addEventListener("keydown", e => {
 });
 $("#search").addEventListener("input", e => { state.q = e.target.value; renderMenu(); });
 $("#orderForm").addEventListener("change", e => { if (e.target.name === "mode") $("#addressField").hidden = e.target.value !== "delivery"; });
+$("#eventForm").addEventListener("change", e => { if (e.target.name === "mode") $("#evAddressField").hidden = e.target.value !== "delivery"; });
 $$(".sheet").forEach(s => { // deslizar hacia abajo para cerrar
   let y0 = null;
   s.addEventListener("touchstart", e => { if (e.target === s || e.target.closest(".sheet-head")) y0 = e.touches[0].clientY; }, { passive: true });
@@ -176,6 +238,6 @@ $$(".sheet").forEach(s => { // deslizar hacia abajo para cerrar
   Cart.load();
   renderAll();
   const d = new Date(); d.setDate(d.getDate() + (CONFIG.minDaysAhead || 0));
-  $("#orderForm").elements.date.min = d.toISOString().slice(0, 10);
+  $("#orderForm").elements.date.min = localISO(d);
   Store.subscribe(refresh);
 })();

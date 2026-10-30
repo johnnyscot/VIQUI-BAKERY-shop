@@ -42,6 +42,15 @@
     <div id="productsContainer"><p class="loading">Cargando menú…</p></div>
   </section>
 
+  <section class="wrap" id="eventos" hidden>
+    <div class="event-card glass">
+      <span class="event-emoji" aria-hidden="true">🎂</span>
+      <h2>¿Celebración especial?</h2>
+      <p>Cumpleaños, baby showers, bodas y eventos. Cuéntanos tu idea y te cotizamos a tu medida.</p>
+      <button class="btn btn-primary" data-open="eventModal">Cotizar mi evento</button>
+    </div>
+  </section>
+
   <section class="wrap" id="como-pedir">
     <h2 class="sec-title">Cómo pedir</h2>
     <div class="steps">
@@ -96,12 +105,37 @@
   </div>
 </aside>
 
+<div class="sheet" id="eventModal" role="dialog" aria-modal="true" aria-label="Cotizar evento">
+  <div class="sheet-head"><h2>Cotizar evento</h2><button class="x" data-close aria-label="Cerrar">✕</button></div>
+  <div class="sheet-body">
+    <form id="eventForm" class="order-form" onsubmit="return false" novalidate>
+      <label class="field">Tu nombre<input name="customer" autocomplete="name" placeholder="Nombre y apellido"></label>
+      <label class="field">Tipo de evento<select name="type"><option>Cumpleaños</option><option>Baby shower</option><option>Boda</option><option>Aniversario</option><option>Corporativo</option><option>Otro</option></select></label>
+      <div class="two">
+        <label class="field">Personas<input name="people" type="number" inputmode="numeric" min="1" placeholder="Ej: 30"></label>
+        <label class="field">Fecha<input name="date" type="date"></label>
+      </div>
+      <fieldset class="field"><legend>¿Qué te interesa?</legend><div id="eventPicks" class="picks"></div></fieldset>
+      <div class="seg" role="radiogroup" aria-label="Entrega">
+        <label><input type="radio" name="mode" value="pickup" checked><span>Recoger</span></label>
+        <label><input type="radio" name="mode" value="delivery"><span>Delivery</span></label>
+      </div>
+      <label class="field" id="evAddressField" hidden>Dirección de entrega<input name="address" autocomplete="street-address" placeholder="Calle, sector y referencia"></label>
+      <label class="field">Presupuesto aproximado (opcional)<input name="budget" type="number" inputmode="numeric" min="0"></label>
+      <label class="field">Cuéntanos tu idea<textarea name="idea" rows="3" placeholder="Colores, decoración, mensaje, alergias..."></textarea></label>
+      <p class="hint" id="eventHint"></p>
+    </form>
+  </div>
+  <div class="sheet-foot"><button class="btn btn-wa" id="eventSend">Enviar por WhatsApp</button></div>
+</div>
+
 <div class="sheet confirm" id="confirmModal" role="dialog" aria-modal="true" aria-label="Pedido enviado">
   <div class="sheet-body">
     <div class="confirm-icon">🎉</div>
-    <h2>¡Pedido enviado!</h2>
-    <p>Abrimos WhatsApp con tu pedido listo. Si no lo enviaste todavía, solo toca enviar. Te responderemos pronto para confirmar.</p>
+    <h2 id="cfTitle">¡Pedido enviado!</h2>
+    <p id="cfText">Abrimos WhatsApp con tu pedido listo. Si no lo enviaste todavía, solo toca enviar. Te responderemos pronto para confirmar.</p>
     <button class="btn btn-primary" data-close>Seguir viendo el menú</button>
+    <a class="link-btn" id="waLink" href="#" target="_blank" rel="noopener">¿No se abrió WhatsApp? Ábrelo aquí</a>
   </div>
 </div>
 

@@ -6,4 +6,4 @@ const SUPABASE = {
 };
 
 // Valores por defecto; los datos reales (WhatsApp, horarios...) se editan desde el panel de administración.
-const CONFIG = { whatsapp: "", currency: "RD$", minDaysAhead: 1, instagram: "", instagramHandle: "", address: "", hours: [], notice: "" };
+const CONFIG = { whatsapp: "", currency: "RD$", minDaysAhead: 1, instagram: "", instagramHandle: "", address: "", hours: [], notice: "", eventsEnabled: true, eventsLeadDays: 5, eventsNote: "" };

@@ -150,3 +150,25 @@ a,button,input,label,textarea{touch-action:manipulation}
 .confirm-icon{font-size:3.5rem}.confirm h2{font-family:var(--font-display);font-size:1.7rem}.confirm p{color:var(--muted);margin-bottom:.8rem}
 
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}html{scroll-behavior:auto}}
+
+/* Stock del día */
+.stock{position:absolute;left:8px;bottom:8px;padding:.2rem .65rem;border-radius:999px;font-size:.72rem;font-weight:700;background:rgba(255,255,255,.85)}
+.stock.low{color:var(--accent)}.stock.out{background:var(--ink);color:var(--cream)}
+.card.sold .thumb,.card.sold h3,.card.sold p{opacity:.55}.card.sold{cursor:default}
+.btn:disabled,.add:disabled{opacity:.45;cursor:not-allowed}
+
+/* Eventos */
+.event-card{padding:1.8rem 1.4rem;border-radius:28px;text-align:center;display:grid;gap:.7rem;justify-items:center;background:linear-gradient(135deg,rgba(255,216,77,.5),rgba(255,159,28,.35))}
+.event-emoji{font-size:2.6rem;line-height:1}
+.event-card h2{font-family:var(--font-display);font-weight:600;font-size:1.6rem}
+.event-card p{color:var(--muted);max-width:32ch;margin-bottom:.4rem}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:.6rem}
+.field select{width:100%;min-height:48px;padding:.7rem .9rem;border-radius:14px;border:1px solid rgba(59,36,16,.18);background:rgba(255,255,255,.65);font-size:16px}
+fieldset.field{border:0;padding:0;min-width:0}
+fieldset.field legend{margin-bottom:.4rem;padding:0}
+.picks{display:flex;flex-wrap:wrap;gap:.5rem}
+.pick input{position:absolute;opacity:0}
+.pick span{display:block;padding:.55rem .95rem;border-radius:999px;border:1px solid rgba(59,36,16,.18);background:rgba(255,255,255,.55);color:var(--ink);font-weight:600;font-size:.88rem;cursor:pointer}
+.pick input:checked+span{background:var(--ink);color:var(--cream);border-color:var(--ink)}
+.pick input:focus-visible+span{outline:3px solid var(--chinola)}
+.hint{font-size:.82rem;color:var(--muted)}

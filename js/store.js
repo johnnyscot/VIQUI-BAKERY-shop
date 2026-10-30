@@ -11,7 +11,7 @@ const Store = {
         .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); });
       const [categories, products, rows] = await Promise.all([
         get("categories?select=id,title,icon&order=position,id"),
-        get("products?select=id,category,name,description,price,badge,emoji,img,featured&available=eq.true&order=position,id"),
+        get("products?select=id,category,name,description,price,badge,emoji,img,featured,stock&available=eq.true&order=position,id"),
         get("settings?select=key,value")
       ]);
       return { categories, products, rows };
@@ -31,6 +31,16 @@ const Store = {
       Object.assign(CONFIG, Object.fromEntries(d.rows.map(r => [r.key, r.value])));
       return true;
     } catch (e) { return false; }
+  },
+
+  // Registra el pedido y descuenta el stock en la base de datos (sin dejar vender de más)
+  async placeOrder(items) {
+    try {
+      const r = await fetch(`${SUPABASE.url}/rest/v1/rpc/place_order`, { method: "POST",
+        headers: { apikey: SUPABASE.key, "Content-Type": "application/json" }, body: JSON.stringify({ items }) });
+      if (!r.ok) throw new Error(r.status);
+      return await r.json();
+    } catch (e) { return { ok: false, error: "red" }; }
   },
 
   // Aviso inmediato cuando la administradora cambia algo (Supabase Realtime)
@@ -55,7 +65,18 @@ const Cart = {
   key: "viqui2-cart", items: [],
   load() { try { this.items = JSON.parse(localStorage.getItem(this.key)) || []; } catch (e) { this.items = []; } this.prune(); },
   save() { try { localStorage.setItem(this.key, JSON.stringify(this.items)); } catch (e) {} },
-  prune() { const n = this.items.length; this.items = this.items.filter(i => i.qty > 0 && PRODUCTS.some(p => p.id === i.id)); return n - this.items.length; },
+  // Quita postres que ya no existen o se agotaron, y ajusta cantidades al stock. Devuelve cuántos cambios hizo.
+  prune() {
+    if (!PRODUCTS.length) return 0;
+    let cambios = 0;
+    this.items = this.items.filter(i => i.qty > 0).map(i => {
+      const p = PRODUCTS.find(x => x.id === i.id);
+      if (!p || p.stock === 0) { cambios++; return null; }
+      if (p.stock != null && i.qty > p.stock) { cambios++; return { ...i, qty: p.stock }; }
+      return i;
+    }).filter(Boolean);
+    return cambios;
+  },
   add(id, q = 1) { const it = this.items.find(i => i.id === id); it ? it.qty += q : this.items.push({ id, qty: q }); this.save(); },
   change(id, d) { const it = this.items.find(i => i.id === id); if (!it) return; it.qty += d; this.items = this.items.filter(i => i.qty > 0); this.save(); },
   clear() { this.items = []; this.save(); },
