@@ -15,7 +15,7 @@ function pic(p, cls) {
 
 /* ── Pintar la página ── */
 const sold = p => p.stock === 0;
-const stockTag = p => p.stock == null ? "" : p.stock === 0 ? `<span class="stock out">Agotado hoy</span>` : p.stock <= 5 ? `<span class="stock low">Quedan ${p.stock}</span>` : "";
+const stockTag = p => p.stock == null ? "" : p.stock === 0 ? `<span class="stock out">Agotado hoy</span>` : "";
 const card = p => `
   <article class="card glass${sold(p) ? " sold" : ""}" tabindex="0" data-product="${p.id}" aria-label="${esc(p.name)}, ${money(p.price)}${sold(p) ? ", agotado" : ""}">
     <div class="thumb">${pic(p, "cover")}${p.badge ? `<span class="badge">${esc(p.badge)}</span>` : ""}${stockTag(p)}</div>
@@ -90,7 +90,7 @@ function addToCart(id, qty = 1) {
   const p = byId(id); if (!p) return;
   const have = Cart.items.find(i => i.id === id)?.qty || 0;
   if (p.stock === 0) return toast("Este postre se agotó hoy");
-  if (p.stock != null && have + qty > p.stock) return toast(`Solo quedan ${p.stock} de ${p.name}`);
+  if (p.stock != null && have + qty > p.stock) return toast(`No hay más disponibles de ${p.name}`);
   Cart.add(id, qty); renderCart();
   if (navigator.vibrate) navigator.vibrate(12);
   toast(`${p.emoji || "🍰"} ${p.name} agregado`);
@@ -208,7 +208,7 @@ document.addEventListener("click", e => {
   if (t.closest("[data-clear]")) { state.q = ""; state.cat = "all"; $("#search").value = ""; return (renderChips(), renderMenu()); }
   if (qty) {
     const id = +qty.dataset.qty, dl = +qty.dataset.d, p = byId(id), have = Cart.items.find(i => i.id === id)?.qty || 0;
-    if (dl > 0 && p && p.stock != null && have + dl > p.stock) return toast(`Solo quedan ${p.stock} de ${p.name}`);
+    if (dl > 0 && p && p.stock != null && have + dl > p.stock) return toast(`No hay más disponibles de ${p.name}`);
     Cart.change(id, dl); return renderCart();
   }
   if (mq) { const mp = byId(state.modalId); state.modalQty = Math.min(mp.stock ?? 99, Math.max(1, state.modalQty + +mq.dataset.mq)); $("#mq").textContent = state.modalQty; $("#mAdd").textContent = `Agregar · ${money(byId(state.modalId).price * state.modalQty)}`; return; }
